@@ -80,8 +80,14 @@ async def on_ready():
     except Exception as e:
         print(f"⚠️ Pemeriksaan Opus gagal: {e}")
     
-    # py-cord automatically syncs slash commands, no manual sync needed
-    print(f"✅ Perintah slash siap")
+    # Auto-sync commands for VPS deployment
+    try:
+        synced = await bot.sync_commands()
+        print(f"✅ Perintah slash disinkronisasi: {len(synced)} commands")
+    except Exception as e:
+        print(f"⚠️ Auto-sync gagal: {e}")
+        print("💡 Gunakan command /sync untuk sync manual")
+    
     print(f'🚀 Bot sepenuhnya operasional dengan fitur interaktif!')
 
 @bot.event
@@ -136,7 +142,51 @@ async def ping(ctx):
     
     await ctx.respond(embed=embed)
 
+@slash_command(description="⚙️ Sync command slash bot (Owner only)")
+async def sync(ctx):
+    """Sync slash commands manually for VPS deployment"""
+    # Check if user is bot owner
+    if ctx.author.id != bot.owner_id:
+        # You can also check for admin permissions
+        if not ctx.author.guild_permissions.administrator:
+            embed = discord.Embed(
+                title="❌ Akses Ditolak",
+                description="Hanya owner bot atau administrator yang dapat melakukan sync!",
+                color=0xFF0000
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+    
+    try:
+        # Sync commands globally
+        await bot.sync_commands()
+        
+        embed = discord.Embed(
+            title="✅ Sync Berhasil",
+            description="Semua slash command telah disinkronisasi!\nCommand mungkin membutuhkan waktu beberapa menit untuk muncul.",
+            color=0x00FF00
+        )
+        embed.add_field(
+            name="📊 Info",
+            value=f"• Guild: {ctx.guild.name if ctx.guild else 'DM'}\n• Total Commands: {len(bot.pending_application_commands)}",
+            inline=False
+        )
+        embed.set_footer(text="🚀 Bot siap digunakan di VPS")
+        
+        await ctx.respond(embed=embed)
+        print(f"✅ Commands disync oleh {ctx.author} di {ctx.guild.name if ctx.guild else 'DM'}")
+        
+    except Exception as e:
+        embed = discord.Embed(
+            title="❌ Sync Gagal",
+            description=f"Error saat melakukan sync: {str(e)}",
+            color=0xFF0000
+        )
+        await ctx.respond(embed=embed, ephemeral=True)
+        print(f"❌ Error sync: {e}")
+
 bot.add_application_command(ping)
+bot.add_application_command(sync)
 
 @bot.event
 async def on_guild_join(guild):
